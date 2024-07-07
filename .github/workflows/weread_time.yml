@@ -1,0 +1,45 @@
+name: 生成微信读书阅读热力图
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */3 * * *"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  sync:
+    name: Sync
+    runs-on: ubuntu-latest
+    env:
+      WEREAD_COOKIE: ${{ secrets.WEREAD_COOKIE }}
+      YEAR: ${{ vars.YEAR }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 获取年份
+        run: echo "YEAR=$(date +"%Y")" >> $GITHUB_ENV
+        if: env.YEAR == ''
+      - name: 生成时间热力图
+        run: |
+          github_heatmap weread  --year $YEAR  --me "elvinn 的微信读书记录" --without-type-name --background-color='#FFFFFF' --track-color='#81C6FC' --special-color1='#5AB6FD' --special-color2='#34A7FF' --dom-color='#EBEDF0' --text-color='#000000'
+      - name: 重命名文件
+        run: |
+          FILENAME=weread-$YEAR.svg
+          mv ./OUT_FOLDER/weread.svg ./assets/$FILENAME
+          echo "Renamed file to $FILENAME"
+      - name: 提交文件
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "$(echo "feat(weread): 生成 $YEAR 年阅读记录")" || echo "nothing to commit"
+          git push || echo "nothing to push"
