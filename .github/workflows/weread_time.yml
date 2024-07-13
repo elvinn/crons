@@ -3,7 +3,7 @@ name: 生成微信读书阅读热力图
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 */12 * * *"
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -43,3 +43,14 @@ jobs:
           git add .
           git commit -m "$(echo "feat(weread): 生成 $YEAR 年阅读记录")" || echo "nothing to commit"
           git push || echo "nothing to push"
+      - name: 提交文件到 wiki 仓库
+        uses: nkoppel/push-files-to-another-repository@v1.1.3
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        with:
+          source-files: 'assets/'
+          destination-username: 'elvinn'
+          destination-repository: 'the-faintest-ink'
+          destination-directory: 'docs/public/crons/'
+          commit-username: 'github-actions[bot]'
+          commit-email: 'github-actions[bot]@users.noreply.github.com'
